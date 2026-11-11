@@ -313,7 +313,8 @@ namespace BestClip
                     y = wa.Top + (wa.Height - height) / 2;
                 }
 
-                WinForms.Screen targetScreen = WinForms.Screen.FromHandle(handle);
+                WinForms.Screen targetScreen = WinForms.Screen.FromPoint(
+                    new System.Drawing.Point(x + width / 2, y + height / 2));
                 System.Drawing.Rectangle area = targetScreen.WorkingArea;
                 x = Math.Max(area.Left + 8, Math.Min(x, area.Right - width - 8));
                 y = Math.Max(area.Top + 8, Math.Min(y, area.Bottom - height - 8));
