@@ -89,8 +89,23 @@ namespace BestClip
                         : first;
                 }
 
-                string t = Normalize(Text);
-                if (t.Length > 160) t = t.Substring(0, 160);
+                string raw = Text ?? "";
+                string normalized = Normalize(raw);
+                int lineBreak = raw.IndexOfAny(new[] { '\r', '\n' });
+                string t = normalized;
+                bool shortened = false;
+                if (lineBreak >= 0)
+                {
+                    string firstLine = Normalize(raw.Substring(0, lineBreak));
+                    // Short first lines read better together; long/code-like first lines stand alone.
+                    if (firstLine.Length >= 48 || normalized.Length > 160)
+                    {
+                        t = firstLine;
+                        shortened = true;
+                    }
+                }
+                if (t.Length > 160) { t = t.Substring(0, 160); shortened = true; }
+                if (shortened && t.Length > 0 && !t.EndsWith("…")) t += " …";
                 return string.IsNullOrEmpty(t) ? "(空文本)" : t;
             }
         }

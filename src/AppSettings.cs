@@ -200,5 +200,28 @@ namespace BestClip
                 return false;
             }
         }
+
+        /// <summary>Keeps the Run entry pointing at the current exe after the portable folder is moved.</summary>
+        public static void RefreshIfEnabled()
+        {
+            try
+            {
+                if (!IsEnabled()) return;
+
+                string exe = Assembly.GetExecutingAssembly().Location;
+                string expected = "\"" + exe + "\" --autostart";
+                using (var key = Registry.CurrentUser.OpenSubKey(RunKey, true))
+                {
+                    if (key == null) return;
+                    string current = key.GetValue(ValueName) as string;
+                    if (!string.Equals(current, expected, StringComparison.OrdinalIgnoreCase))
+                        key.SetValue(ValueName, expected);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppPaths.Log(ex);
+            }
+        }
     }
 }

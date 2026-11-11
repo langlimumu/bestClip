@@ -226,12 +226,12 @@
                         <TextBlock Text="让 BestClip 更符合你的习惯" FontSize="10.5" Foreground="#6D7789" Margin="0,3,0,0"/>
                     </StackPanel>
                     <Button x:Name="CloseButton" HorizontalAlignment="Right" VerticalAlignment="Center"
-                            Style="{StaticResource IconButton}" ToolTip="关闭">
+                            Style="{StaticResource IconButton}" ToolTip="关闭" AutomationProperties.Name="关闭设置">
                         <TextBlock Text="&#xE8BB;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13"/>
                     </Button>
                 </Grid>
 
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled"
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                               Padding="0,0,0,4">
                     <StackPanel Margin="24,2,24,10">
                         <TextBlock Text="快捷键" Style="{StaticResource SectionTitle}"/>
@@ -248,7 +248,8 @@
                                     </StackPanel>
                                     <Border x:Name="HotkeyBox" Grid.Column="1" Width="172" Height="38"
                                             Background="#0FFFFFFF" BorderBrush="#1FFFFFFF" BorderThickness="1"
-                                            CornerRadius="9" VerticalAlignment="Center" Margin="0,0,0,2">
+                                            CornerRadius="9" VerticalAlignment="Center" Margin="0,0,0,2"
+                                            AutomationProperties.Name="全局快捷键，点击重新录制">
                                         <TextBlock x:Name="HotkeyText" Text="Ctrl + Shift + V" FontSize="12"
                                                    Foreground="#DDE3EE" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
@@ -345,11 +346,21 @@
 
                 <Grid Grid.Row="2" Margin="24,0,20,0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="VersionText" Text="BestClip 1.0.1" FontSize="10" Foreground="#5F697B"/>
+                        <TextBlock x:Name="VersionText" Text="BestClip 1.1.0" FontSize="10" Foreground="#5F697B"/>
                         <TextBlock Text="  ·  " FontSize="10" Foreground="#3E4758"/>
                         <TextBlock FontSize="10">
                             <Hyperlink x:Name="GitHubLink" NavigateUri="https://github.com/langlimumu/bestClip"
                                        Foreground="#8B7CFF" TextDecorations="None">GitHub</Hyperlink>
+                        </TextBlock>
+                        <TextBlock Text="  ·  " FontSize="10" Foreground="#3E4758"/>
+                        <TextBlock FontSize="10">
+                            <Hyperlink x:Name="DataLink" NavigateUri="file:///"
+                                       Foreground="#8B7CFF" TextDecorations="None">数据目录</Hyperlink>
+                        </TextBlock>
+                        <TextBlock Text="  ·  " FontSize="10" Foreground="#3E4758"/>
+                        <TextBlock FontSize="10">
+                            <Hyperlink x:Name="UpdateLink" NavigateUri="https://github.com/langlimumu/bestClip/releases/latest"
+                                       Foreground="#8B7CFF" TextDecorations="None">检查更新</Hyperlink>
                         </TextBlock>
                     </StackPanel>
 
@@ -357,7 +368,7 @@
                         <TextBlock x:Name="SaveError" FontSize="10.5" Foreground="#FF8093"
                                    VerticalAlignment="Center" Margin="0,0,12,0" Visibility="Collapsed"/>
                         <Button x:Name="SaveButton" Content="保存" Style="{StaticResource PrimaryButton}"
-                                Width="92" Height="38"/>
+                                AutomationProperties.Name="保存设置" Width="92" Height="38"/>
                     </StackPanel>
                 </Grid>
             </Grid>

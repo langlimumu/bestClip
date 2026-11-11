@@ -23,6 +23,8 @@ namespace BestClip
         private EventWaitHandle _showEvent;
         private Thread _showThread;
         private bool _exiting;
+        private bool _closeHintShown;
+        private string _hotkeyError;
         private string[] _args;
 
         public AppSettings Settings { get { return _settings; } }
@@ -32,6 +34,7 @@ namespace BestClip
         public bool SuppressHide { get; set; }
         public bool SettingsOpen { get; set; }
         public bool ShuttingDown { get; set; }
+        public string HotkeyError { get { return _hotkeyError; } }
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -43,6 +46,7 @@ namespace BestClip
             {
                 AppPaths.EnsureCreated();
                 _settings = AppSettings.Load();
+                AutoStart.RefreshIfEnabled();
                 _store = new HistoryStore(_settings.MaxItems);
                 _store.Load();
                 _store.Changed += Store_Changed;
@@ -60,12 +64,16 @@ namespace BestClip
                 string hotkeyError;
                 if (!_hotkeyWindow.RegisterHotkey(_settings.HotkeyModifiers, _settings.HotkeyKey, out hotkeyError))
                 {
+                    _hotkeyError = hotkeyError;
                     AppPaths.Log(new InvalidOperationException("Hotkey registration failed: " + hotkeyError));
                 }
 
                 _main = new MainWindowController(this);
                 _tray = new TrayIcon(this);
                 _main.Refresh();
+
+                if (!string.IsNullOrEmpty(_hotkeyError))
+                    _tray.ShowBalloon("BestClip", "全局快捷键注册失败：" + _hotkeyError + "。请在设置中更换快捷键。");
 
                 DispatcherUnhandledException += App_DispatcherUnhandledException;
                 Application.Current.SessionEnding += App_SessionEnding;
@@ -209,6 +217,15 @@ namespace BestClip
             if (_main != null) _main.Hide();
         }
 
+        public void HideMainWithHint()
+        {
+            HideMain();
+            if (_closeHintShown || _tray == null) return;
+            _closeHintShown = true;
+            _tray.ShowBalloon("BestClip 仍在后台运行",
+                "按 " + _settings.HotkeyText + " 可随时呼出，右键托盘图标可退出。");
+        }
+
         public void ToggleMain()
         {
             if (_main != null && _main.IsVisible) HideMain();
@@ -319,6 +336,7 @@ namespace BestClip
             {
                 _settings.HotkeyModifiers = modifiers;
                 _settings.HotkeyKey = key;
+                _hotkeyError = null;
                 if (_main != null) _main.UpdateChrome();
                 return true;
             }
@@ -331,6 +349,7 @@ namespace BestClip
         public void TogglePause()
         {
             _clipboard.Enabled = !_clipboard.Enabled;
+            if (_tray != null) _tray.SetPaused(!_clipboard.Enabled);
             if (_main != null)
             {
                 _main.Refresh();

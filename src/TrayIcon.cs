@@ -97,6 +97,17 @@ namespace BestClip
             if (e.Button == MouseButtons.Left) _app.ShowMain();
         }
 
+        public void SetPaused(bool paused)
+        {
+            try
+            {
+                _notify.Text = paused ? "BestClip · 已暂停记录" : "BestClip · 剪贴板历史";
+            }
+            catch
+            {
+            }
+        }
+
         public void ShowBalloon(string title, string text)
         {
             try

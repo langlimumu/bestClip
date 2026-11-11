@@ -8,6 +8,7 @@ namespace BestClip
 {
     public class HistoryStore
     {
+        private const long MaxTotalBytes = 128L * 1024 * 1024;
         private readonly List<ClipItem> _items = new List<ClipItem>();
 
         public event EventHandler Changed;
@@ -23,6 +24,7 @@ namespace BestClip
         public void Load()
         {
             _items.Clear();
+            bool loadedHistory = false;
             try
             {
                 if (File.Exists(AppPaths.HistoryFile))
@@ -33,6 +35,7 @@ namespace BestClip
                         var list = ser.ReadObject(fs) as List<ClipItem>;
                         if (list != null)
                         {
+                            loadedHistory = true;
                             foreach (ClipItem item in list)
                             {
                                 if (item == null || string.IsNullOrEmpty(item.Id)) continue;
@@ -58,6 +61,7 @@ namespace BestClip
 
             Reorder();
             Trim();
+            if (loadedHistory) CleanupOrphanImages();
         }
 
         private static void TryBackupBrokenHistory()
@@ -179,16 +183,66 @@ namespace BestClip
         private void Trim()
         {
             int unpinned = _items.Count(i => !i.Pinned);
-            if (unpinned <= MaxItems) return;
+            long totalBytes = 0;
+            foreach (ClipItem item in _items) totalBytes += EstimateBytes(item);
 
-            int toRemove = unpinned - MaxItems;
-            for (int i = _items.Count - 1; i >= 0 && toRemove > 0; i--)
+            if (unpinned <= MaxItems && totalBytes <= MaxTotalBytes) return;
+
+            for (int i = _items.Count - 1; i >= 0; i--)
             {
-                if (_items[i].Pinned) continue;
+                if (unpinned <= MaxItems && totalBytes <= MaxTotalBytes) break;
                 ClipItem dead = _items[i];
+                if (dead.Pinned) continue;
+
                 _items.RemoveAt(i);
+                totalBytes -= EstimateBytes(dead);
+                unpinned--;
                 if (dead.Kind == ClipKind.Image) DeleteImageFile(dead.ImageFile);
-                toRemove--;
+            }
+        }
+
+        private static long EstimateBytes(ClipItem item)
+        {
+            if (item == null) return 0;
+            long size = 64;
+            if (item.Kind == ClipKind.Image)
+            {
+                size += item.SizeBytes;
+            }
+            else if (item.Kind == ClipKind.Files && item.Files != null)
+            {
+                foreach (string file in item.Files)
+                    if (!string.IsNullOrEmpty(file)) size += (long)file.Length * 2 + 16;
+            }
+            else if (!string.IsNullOrEmpty(item.Text))
+            {
+                size += (long)item.Text.Length * 2;
+            }
+            return size;
+        }
+
+        private void CleanupOrphanImages()
+        {
+            try
+            {
+                if (!Directory.Exists(AppPaths.ImagesDir)) return;
+
+                var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (ClipItem item in _items)
+                {
+                    if (item.Kind == ClipKind.Image && !string.IsNullOrEmpty(item.ImageFile))
+                        used.Add(item.ImageFile);
+                }
+
+                foreach (string file in Directory.GetFiles(AppPaths.ImagesDir, "*.png"))
+                {
+                    if (used.Contains(Path.GetFileName(file))) continue;
+                    try { File.Delete(file); } catch { }
+                }
+            }
+            catch (Exception ex)
+            {
+                AppPaths.Log(ex);
             }
         }
 

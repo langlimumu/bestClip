@@ -70,6 +70,15 @@ namespace BestClip
 
             BuildMaxItems();
             WireEvents();
+
+            // Make sure Esc reaches the window even before the user clicks a control.
+            _window.Focusable = true;
+            _window.Loaded += delegate
+            {
+                _window.Activate();
+                _window.Focus();
+                Keyboard.Focus(_window);
+            };
         }
 
         public Window Window { get { return _window; } }
@@ -97,6 +106,20 @@ namespace BestClip
             link.RequestNavigate += delegate
             {
                 try { Process.Start("https://github.com/langlimumu/bestClip"); }
+                catch (Exception ex) { AppPaths.Log(ex); }
+            };
+
+            var dataLink = (System.Windows.Documents.Hyperlink)_window.FindName("DataLink");
+            dataLink.RequestNavigate += delegate
+            {
+                try { Process.Start("explorer.exe", AppPaths.DataDir); }
+                catch (Exception ex) { AppPaths.Log(ex); }
+            };
+
+            var updateLink = (System.Windows.Documents.Hyperlink)_window.FindName("UpdateLink");
+            updateLink.RequestNavigate += delegate
+            {
+                try { Process.Start("https://github.com/langlimumu/bestClip/releases/latest"); }
                 catch (Exception ex) { AppPaths.Log(ex); }
             };
         }
@@ -172,7 +195,15 @@ namespace BestClip
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (!_recording) return;
+            if (!_recording)
+            {
+                if (e.Key == Key.Escape)
+                {
+                    _window.Close();
+                    e.Handled = true;
+                }
+                return;
+            }
 
             if (e.Key == Key.Escape)
             {
@@ -235,6 +266,17 @@ namespace BestClip
                 return;
             }
 
+            bool wantAutoStart = _autoStart.IsChecked == true;
+            bool autoStartChanged = wantAutoStart != AutoStart.IsEnabled();
+            if (autoStartChanged)
+            {
+                if (!AutoStart.Set(wantAutoStart))
+                {
+                    ShowSaveError("无法修改开机启动项，请检查系统权限");
+                    return;
+                }
+            }
+
             bool hotkeyChanged = _candidateModifiers != _app.Settings.HotkeyModifiers ||
                                  _candidateKey != _app.Settings.HotkeyKey;
             if (hotkeyChanged)
@@ -242,17 +284,8 @@ namespace BestClip
                 string error;
                 if (!_app.TryChangeHotkey(_candidateModifiers, _candidateKey, out error))
                 {
+                    if (autoStartChanged) AutoStart.Set(!wantAutoStart);
                     ShowHotkeyError(error);
-                    return;
-                }
-            }
-
-            bool wantAutoStart = _autoStart.IsChecked == true;
-            if (wantAutoStart != AutoStart.IsEnabled())
-            {
-                if (!AutoStart.Set(wantAutoStart))
-                {
-                    ShowSaveError("无法修改开机启动项，请检查系统权限");
                     return;
                 }
             }
@@ -287,35 +320,39 @@ namespace BestClip
                 uint dpi = Native.GetDpiForWindow(handle);
                 double scale = dpi > 0 ? dpi / 96.0 : 1.0;
 
+                WinForms.Screen targetScreen;
+                System.Drawing.Rectangle area;
+                Native.RECT bounds = new Native.RECT();
+                bool hasMain = main != null && main.IsVisible &&
+                    Native.GetWindowRect(new WindowInteropHelper(main).Handle, out bounds);
+
+                if (hasMain)
+                    targetScreen = WinForms.Screen.FromHandle(new WindowInteropHelper(main).Handle);
+                else
+                    targetScreen = WinForms.Screen.FromPoint(WinForms.Cursor.Position);
+                area = targetScreen.WorkingArea;
+
+                // Shrink the settings window instead of letting it run off a small/high-DPI screen.
+                double maxDipHeight = (area.Height - 16) / scale;
+                if (_window.Height > maxDipHeight)
+                    _window.Height = Math.Max(480, maxDipHeight);
+
                 int width = (int)Math.Round(_window.Width * scale);
                 int height = (int)Math.Round(_window.Height * scale);
-                int x = 0;
-                int y = 0;
-                bool positioned = false;
 
-                if (main != null && main.IsVisible)
+                int x;
+                int y;
+                if (hasMain)
                 {
-                    Native.RECT bounds;
-                    IntPtr mainHandle = new WindowInteropHelper(main).Handle;
-                    if (Native.GetWindowRect(mainHandle, out bounds))
-                    {
-                        x = bounds.Left + (bounds.Right - bounds.Left - width) / 2;
-                        y = bounds.Top + (bounds.Bottom - bounds.Top - height) / 2;
-                        positioned = true;
-                    }
+                    x = bounds.Left + (bounds.Right - bounds.Left - width) / 2;
+                    y = bounds.Top + (bounds.Bottom - bounds.Top - height) / 2;
+                }
+                else
+                {
+                    x = area.Left + (area.Width - width) / 2;
+                    y = area.Top + (area.Height - height) / 2;
                 }
 
-                if (!positioned)
-                {
-                    WinForms.Screen screen = WinForms.Screen.FromPoint(WinForms.Cursor.Position);
-                    System.Drawing.Rectangle wa = screen.WorkingArea;
-                    x = wa.Left + (wa.Width - width) / 2;
-                    y = wa.Top + (wa.Height - height) / 2;
-                }
-
-                WinForms.Screen targetScreen = WinForms.Screen.FromPoint(
-                    new System.Drawing.Point(x + width / 2, y + height / 2));
-                System.Drawing.Rectangle area = targetScreen.WorkingArea;
                 x = Math.Max(area.Left + 8, Math.Min(x, area.Right - width - 8));
                 y = Math.Max(area.Top + 8, Math.Min(y, area.Bottom - height - 8));
 

@@ -365,12 +365,12 @@
                         </Border>
 
                         <Button x:Name="SettingsButton" Grid.Column="4" Style="{StaticResource IconButton}"
-                                ToolTip="设置">
+                                ToolTip="设置" AutomationProperties.Name="设置">
                             <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="15"/>
                         </Button>
 
                         <Button x:Name="CloseButton" Grid.Column="5" Style="{StaticResource IconButton}"
-                                ToolTip="隐藏" Margin="2,0,0,0">
+                                ToolTip="隐藏" AutomationProperties.Name="隐藏窗口" Margin="2,0,0,0">
                             <TextBlock Text="&#xE8BB;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13"/>
                         </Button>
                     </Grid>
@@ -389,7 +389,8 @@
                                        FontSize="14" Foreground="#7A8498" VerticalAlignment="Center"/>
 
                             <Grid Grid.Column="1" Margin="9,0,8,0">
-                                <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}"/>
+                                <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}"
+                                         AutomationProperties.Name="搜索剪贴板内容"/>
                                 <TextBlock x:Name="SearchPlaceholder" Text="搜索剪贴板内容…"
                                            FontSize="12.5" Foreground="#5C6679" VerticalAlignment="Center"
                                            IsHitTestVisible="False"/>
@@ -397,7 +398,7 @@
 
                             <Button x:Name="ClearSearchButton" Grid.Column="2" Style="{StaticResource IconButton}"
                                     Width="22" Height="22" Visibility="Collapsed" ToolTip="清除搜索"
-                                    Margin="0,0,6,0">
+                                    AutomationProperties.Name="清除搜索" Margin="0,0,6,0">
                                 <TextBlock Text="&#xE8BB;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10"/>
                             </Button>
 
@@ -433,12 +434,14 @@
                         </StackPanel>
 
                         <Button x:Name="ClearHistoryButton" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                Style="{StaticResource LinkButton}" Content="清空历史"/>
+                                Style="{StaticResource LinkButton}" Content="清空历史"
+                                AutomationProperties.Name="清空历史"/>
                     </Grid>
 
                     <Grid Grid.Row="3" Margin="14,0,10,0">
                         <ListBox x:Name="ClipList" Style="{StaticResource ClipList}"
                                  ItemTemplate="{StaticResource ClipItemTemplate}"
+                                 AutomationProperties.Name="剪贴板历史"
                                  SelectionMode="Single"/>
 
                         <StackPanel x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center"

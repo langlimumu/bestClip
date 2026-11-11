@@ -101,7 +101,7 @@ namespace BestClip
             header.MouseLeftButtonDown += Header_MouseLeftButtonDown;
 
             ((Button)_window.FindName("SettingsButton")).Click += delegate { _app.OpenSettings(); };
-            ((Button)_window.FindName("CloseButton")).Click += delegate { _app.HideMain(); };
+            ((Button)_window.FindName("CloseButton")).Click += delegate { _app.HideMainWithHint(); };
 
             _search.TextChanged += Search_TextChanged;
             _clearSearch.Click += delegate
@@ -282,13 +282,30 @@ namespace BestClip
         {
             if (e.Key == Key.Escape)
             {
-                if (_itemMenu.IsOpen) { _itemMenu.IsOpen = false; }
-                else _app.HideMain();
+                if (_itemMenu.IsOpen)
+                    _itemMenu.IsOpen = false;
+                else if (!string.IsNullOrEmpty(_search.Text))
+                {
+                    _search.Text = "";
+                    _search.Focus();
+                }
+                else
+                    _app.HideMain();
                 e.Handled = true;
                 return;
             }
 
-            if (e.Key == Key.Up)
+            if (e.Key == Key.Home)
+            {
+                if (_list.Items.Count > 0) { _list.SelectedIndex = 0; ScrollToSelection(); }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.End)
+            {
+                if (_list.Items.Count > 0) { _list.SelectedIndex = _list.Items.Count - 1; ScrollToSelection(); }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Up)
             {
                 MoveSelection(-1);
                 e.Handled = true;
@@ -493,7 +510,11 @@ namespace BestClip
 
         public void UpdateChrome()
         {
-            _hotkeyBadge.Text = _app.Settings.HotkeyText;
+            bool hotkeyOk = string.IsNullOrEmpty(_app.HotkeyError);
+            _hotkeyBadge.Text = hotkeyOk ? _app.Settings.HotkeyText : "快捷键未生效";
+            _hotkeyBadge.ToolTip = hotkeyOk
+                ? null
+                : "全局快捷键注册失败：" + _app.HotkeyError + "，请在设置中更换";
             _pausedBadge.Visibility = _app.Clipboard.Enabled ? Visibility.Collapsed : Visibility.Visible;
         }
 
@@ -552,6 +573,10 @@ namespace BestClip
                 System.Drawing.Point cursor = WinForms.Cursor.Position;
                 WinForms.Screen screen = WinForms.Screen.FromPoint(cursor);
                 var wa = screen.WorkingArea;
+
+                // Keep the whole window on screen on small or high-DPI displays.
+                double maxDipHeight = (wa.Height - 16) / scale;
+                _window.Height = Math.Min(680, Math.Max(480, maxDipHeight));
 
                 int width = (int)Math.Ceiling(_window.Width * scale);
                 int height = (int)Math.Ceiling(_window.Height * scale);
