@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 
 namespace BestClip
 {
@@ -21,6 +22,46 @@ namespace BestClip
 
         public const uint INPUT_KEYBOARD = 1;
         public const uint KEYEVENTF_KEYUP = 0x0002;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct KEYBDINPUT
+        {
+            public ushort wVk;
+            public ushort wScan;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MOUSEINPUT
+        {
+            public int dx;
+            public int dy;
+            public uint mouseData;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        public struct INPUTUNION
+        {
+            [FieldOffset(0)]
+            public MOUSEINPUT mi;
+            [FieldOffset(0)]
+            public KEYBDINPUT ki;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct INPUT
+        {
+            public uint type;
+            public INPUTUNION u;
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool AddClipboardFormatListener(IntPtr hwnd);
@@ -100,10 +141,10 @@ namespace BestClip
             return sb.ToString();
         }
 
-        public static void ForceForeground(IntPtr hwnd)
+        public static bool ForceForeground(IntPtr hwnd)
         {
-            if (hwnd == IntPtr.Zero) return;
-            if (GetForegroundWindow() == hwnd) return;
+            if (hwnd == IntPtr.Zero) return false;
+            if (GetForegroundWindow() == hwnd) return true;
 
             if (IsIconic(hwnd)) ShowWindow(hwnd, 9);
 
@@ -128,20 +169,47 @@ namespace BestClip
                 AttachThreadInput(foregroundThread, targetThread, false);
             }
 
-            if (GetForegroundWindow() != hwnd)
+            bool ok = WaitForForeground(hwnd, 6);
+            if (!ok)
             {
                 SwitchToThisWindow(hwnd, true);
+                ok = WaitForForeground(hwnd, 10);
             }
+            return ok;
         }
 
-        public static void SendPaste()
+        private static bool WaitForForeground(IntPtr hwnd, int attempts)
         {
-            const uint down = 0;
-            const uint up = KEYEVENTF_KEYUP;
-            keybd_event((byte)VK_CONTROL, 0, down, UIntPtr.Zero);
-            keybd_event((byte)VK_V, 0, down, UIntPtr.Zero);
-            keybd_event((byte)VK_V, 0, up, UIntPtr.Zero);
-            keybd_event((byte)VK_CONTROL, 0, up, UIntPtr.Zero);
+            for (int i = 0; i < attempts; i++)
+            {
+                if (GetForegroundWindow() == hwnd) return true;
+                Thread.Sleep(30);
+            }
+            return GetForegroundWindow() == hwnd;
+        }
+
+        public static bool SendPaste()
+        {
+            INPUT[] inputs = new INPUT[4];
+            inputs[0].type = INPUT_KEYBOARD;
+            inputs[0].u.ki.wVk = (ushort)VK_CONTROL;
+            inputs[1].type = INPUT_KEYBOARD;
+            inputs[1].u.ki.wVk = (ushort)VK_V;
+            inputs[2].type = INPUT_KEYBOARD;
+            inputs[2].u.ki.wVk = (ushort)VK_V;
+            inputs[2].u.ki.dwFlags = KEYEVENTF_KEYUP;
+            inputs[3].type = INPUT_KEYBOARD;
+            inputs[3].u.ki.wVk = (ushort)VK_CONTROL;
+            inputs[3].u.ki.dwFlags = KEYEVENTF_KEYUP;
+
+            uint sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+            if (sent == inputs.Length) return true;
+
+            // SendInput can be blocked by UIPI when the target runs elevated.
+            // Release any keys that may have been injected before reporting failure.
+            keybd_event((byte)VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            keybd_event((byte)VK_V, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            return false;
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Media;
@@ -28,6 +29,7 @@ namespace BestClip
         private Thread _showThread;
         private bool _exiting;
         private bool _closeHintShown;
+        private bool _autoPasteHintShown;
         private string _hotkeyError;
         private string[] _args;
 
@@ -311,7 +313,16 @@ namespace BestClip
             SaveSoon();
             HideMain();
 
-            if (!_settings.AutoPaste) return;
+            if (!_settings.AutoPaste)
+            {
+                if (!_autoPasteHintShown && _tray != null)
+                {
+                    _autoPasteHintShown = true;
+                    _tray.ShowBalloon("已复制到剪贴板", "自动粘贴已关闭，请在目标窗口按 Ctrl+V 粘贴。");
+                }
+                return;
+            }
+
             IntPtr target = _previousForeground;
             Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(delegate
             {
@@ -323,23 +334,55 @@ namespace BestClip
         {
             try
             {
-                if (target == IntPtr.Zero) return;
+                if (target == IntPtr.Zero || !Native.IsWindow(target))
+                {
+                    ShowPasteFallbackHint("无法找到刚才的目标窗口");
+                    return;
+                }
                 DebugLog("paste target=" + target + " fgBefore=" + Native.GetForegroundWindow() +
                     " valid=" + Native.IsWindow(target));
-                if (!Native.IsWindow(target)) return;
                 if (Native.IsIconic(target)) Native.ShowWindow(target, 9);
 
-                Native.ForceForeground(target);
-                DebugLog("after force fg=" + Native.GetForegroundWindow());
+                bool focused = Native.ForceForeground(target);
+                DebugLog("after force fg=" + Native.GetForegroundWindow() + " focused=" + focused);
+                if (!focused)
+                {
+                    ShowPasteFallbackHint("无法把目标窗口切换到前台");
+                    return;
+                }
 
-                Thread.Sleep(110);
-                Native.SendPaste();
-                DebugLog("sent paste");
+                // Let the target process finish activation and restore its focused control.
+                Thread.Sleep(180);
+                if (Native.GetForegroundWindow() != target)
+                {
+                    ShowPasteFallbackHint("目标窗口没有获得键盘焦点");
+                    return;
+                }
+
+                bool sent = Native.SendPaste();
+                if (!sent)
+                {
+                    DebugLog("send paste failed err=" + Marshal.GetLastWin32Error());
+                    ShowPasteFallbackHint("Windows 阻止了模拟按键，目标程序可能以管理员权限运行");
+                }
+                else
+                {
+                    DebugLog("sent paste");
+                }
             }
             catch (Exception ex)
             {
                 AppPaths.Log(ex);
+                ShowPasteFallbackHint("自动粘贴发生异常");
             }
+        }
+
+        private void ShowPasteFallbackHint(string reason)
+        {
+            if (_main != null && _main.IsVisible)
+                _main.ShowToast("已复制，请按 Ctrl+V 粘贴");
+            if (_tray != null)
+                _tray.ShowBalloon("已复制到剪贴板", reason + "。请按 Ctrl+V 粘贴。");
         }
 
         public void OpenSettings()
