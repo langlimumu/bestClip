@@ -6,22 +6,54 @@ namespace BestClip
     /// <summary>All on-disk locations used by BestClip.</summary>
     public static class AppPaths
     {
-        private static readonly string _dataDir;
+        private static string _dataDir;
 
         static AppPaths()
         {
             string overrideDir = Environment.GetEnvironmentVariable("BESTCLIP_DATA");
             if (!string.IsNullOrEmpty(overrideDir))
             {
-                _dataDir = overrideDir;
-            }
-            else
-            {
-                _dataDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "BestClip");
+                Configure(overrideDir);
+                return;
             }
 
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+            string temp = Path.GetTempPath();
+
+            // Locked-down company PCs sometimes deny writes to %APPDATA%.
+            // Try the standard location first, then portable/fallback locations.
+            var candidates = new System.Collections.Generic.List<string>();
+            if (!string.IsNullOrEmpty(appData)) candidates.Add(Path.Combine(appData, "BestClip"));
+            if (!string.IsNullOrEmpty(localAppData)) candidates.Add(Path.Combine(localAppData, "BestClip"));
+            if (!string.IsNullOrEmpty(exeDir)) candidates.Add(Path.Combine(exeDir, "BestClip-data"));
+            if (!string.IsNullOrEmpty(temp)) candidates.Add(Path.Combine(temp, "BestClip"));
+
+            foreach (string candidate in candidates)
+            {
+                try
+                {
+                    Directory.CreateDirectory(candidate);
+                    string probe = Path.Combine(candidate, ".write-test-" + Guid.NewGuid().ToString("N"));
+                    File.WriteAllText(probe, "");
+                    File.Delete(probe);
+                    Configure(candidate);
+                    return;
+                }
+                catch
+                {
+                    // Try the next writable location.
+                }
+            }
+
+            // Nothing worked; keep the standard path so the error message is meaningful.
+            Configure(Path.Combine(appData ?? "", "BestClip"));
+        }
+
+        private static void Configure(string dataDir)
+        {
+            _dataDir = dataDir;
             ImagesDir = Path.Combine(_dataDir, "images");
             HistoryFile = Path.Combine(_dataDir, "history.json");
             SettingsFile = Path.Combine(_dataDir, "settings.json");

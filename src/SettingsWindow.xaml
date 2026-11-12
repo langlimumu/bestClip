@@ -346,7 +346,7 @@
 
                 <Grid Grid.Row="2" Margin="24,0,20,0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="VersionText" Text="BestClip 1.1.0" FontSize="10" Foreground="#5F697B"/>
+                        <TextBlock x:Name="VersionText" Text="BestClip 1.1.1" FontSize="10" Foreground="#5F697B"/>
                         <TextBlock Text="  ·  " FontSize="10" Foreground="#3E4758"/>
                         <TextBlock FontSize="10">
                             <Hyperlink x:Name="GitHubLink" NavigateUri="https://github.com/langlimumu/bestClip"

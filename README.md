@@ -6,6 +6,11 @@
 
 BestClip 是一个单文件、免安装的 Windows 剪贴板管理器。它常驻托盘，在后台安静地记录你复制过的内容；需要时用一个快捷键呼出，搜索、选择、回车，内容就回到当前窗口。
 
+## 1.1.1 更新
+
+- **修复受限电脑上的启动失败**：当 `%APPDATA%\BestClip` 不可写时，自动回退到程序目录下的 `BestClip-data`，再回退到 `%TEMP%\BestClip`，不再弹出“访问被拒绝”。
+- **便携版更真正便携**：把程序放在 U 盘或受限目录也能直接运行，数据跟随程序目录。
+
 ## 1.1 更新
 
 - **更聪明的一行预览**：短消息完整显示；长代码、多行文本只取首行，列表不再挤成一团。
@@ -24,7 +29,7 @@ BestClip 是一个单文件、免安装的 Windows 剪贴板管理器。它常�
 - **全局快捷键**：默认 `Ctrl + Shift + V`，可在设置中重新录制。
 - **托盘常驻**：关闭窗口只是隐藏；托盘菜单可暂停记录、清空历史、打开设置、开机自启或退出。
 - **开机自启**：写入当前用户的启动项，不需要管理员权限。
-- **隐私优先**：所有数据只保存在本机 `%APPDATA%\BestClip`，没有任何网络请求；可忽略 KeePass、1Password、Bitwarden 等密码管理器复制的内容。
+- **隐私优先**：所有数据只保存在本机（默认 `%APPDATA%\BestClip`，不可写时自动改用程序目录下的 `BestClip-data`），没有任何网络请求；可忽略 KeePass、1Password、Bitwarden 等密码管理器复制的内容。
 - **高 DPI 友好**：适配 125% / 150% 缩放和多显示器，窗口会出现在鼠标附近并完整落在屏幕内。
 - **免安装**：一个 exe + 一个 config，解压即用；Windows 10/11 自带 .NET Framework 4.8，无需额外安装运行时。
 
@@ -67,13 +72,13 @@ BestClip 是一个单文件、免安装的 Windows 剪贴板管理器。它常�
 - **开机自动启动**：写入 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`，仅当前用户生效。
 - **忽略密码管理器**：开启后，来自 KeePass、1Password、Bitwarden、LastPass、Dashlane、Enpass、RoboForm 的复制不会被记录。
 - **最大保存条数**：100 / 200 / 300 / 500 / 1000，固定（收藏）的记录不计入自动清理。
-- **数据目录**：打开 `%APPDATA%\BestClip`（或 `BESTCLIP_DATA` 指定的目录）。
+- **数据目录**：打开 BestClip 实际使用的数据目录（默认 `%APPDATA%\BestClip`；不可写时自动回退到程序目录下的 `BestClip-data`，或 `BESTCLIP_DATA` 指定目录）。
 - **检查更新**：打开 GitHub Releases 页面，查看是否有新版本。
 - 底部同时显示当前版本号和项目链接；未保存的修改会在关闭时丢弃。
 
 ## 数据与隐私
 
-数据目录：`%APPDATA%\BestClip\`
+数据目录：`%APPDATA%\BestClip\`（如果该位置不可写，会自动改用程序目录下的 `BestClip-data\`，仍不可写则使用 `%TEMP%\BestClip\`）
 
 ```
 history.json    剪贴板历史（JSON）
@@ -84,7 +89,7 @@ images\         图片记录的 PNG 缓存
 - 所有内容只在本机读写，BestClip 不包含任何联网代码（“检查更新”只是打开浏览器）。
 - 历史同时受“最大条数”和 128 MB 总容量限制，超出后优先清理最旧的未收藏记录。
 - 删除记录时会同步删除对应的图片文件；清空历史会清空整个图片缓存；启动时还会清理不再被引用的孤立图片。
-- 卸载：退出 BestClip，删除程序目录和 `%APPDATA%\BestClip` 即可。
+- 卸载：退出 BestClip，删除程序目录和实际数据目录（默认 `%APPDATA%\BestClip`，或程序目录下的 `BestClip-data`）即可。
 - 高级用法：设置环境变量 `BESTCLIP_DATA` 可以指定独立的数据目录，便于测试或多套配置。
 
 ## 从源码构建

@@ -48,6 +48,10 @@ history.json    剪贴板历史
 settings.json   设置
 images\         图片缓存
 
+如果 %APPDATA% 不可写（部分公司电脑会限制），BestClip 会自动改用
+程序目录下的 BestClip-data\，再不行则用 %TEMP%\BestClip\。
+设置页底部的“数据目录”可以直接打开实际位置。
+
 所有数据只保存在本机，BestClip 不会联网上传任何内容。
 退出程序后删除该目录，即可清空全部数据。
 
@@ -64,7 +68,11 @@ images\         图片缓存
    公司安全策略可能禁止写入启动项。可手动把 BestClip.exe 的快捷方式放入
    shell:startup 目录，并在目标后加上 --autostart 参数。
 
-4. 如何卸载？
+4. 双击后提示“对路径 %APPDATA%\BestClip 的访问被拒绝”？
+   1.1.1 已自动回退到程序目录下的 BestClip-data\，重新下载 1.1.1 即可。
+   也可以手动设置 BESTCLIP_DATA 环境变量指向一个可写目录。
+
+5. 如何卸载？
    退出 BestClip，删除程序目录和 %APPDATA%\BestClip 即可。
 
 项目主页：https://github.com/langlimumu/bestClip
