@@ -19,6 +19,10 @@ namespace BestClip
         private MainWindowController _main;
         private SettingsController _settingsController;
         private DispatcherTimer _saveTimer;
+        private DispatcherTimer _pasteRetryTimer;
+        private ClipItem _pendingPaste;
+        private int _pasteRetryCount;
+        private const int PasteRetryLimit = 30;
         private IntPtr _previousForeground = IntPtr.Zero;
         private EventWaitHandle _showEvent;
         private Thread _showThread;
@@ -194,6 +198,7 @@ namespace BestClip
         public void ShowMain()
         {
             if (ShuttingDown) return;
+            CancelPendingPaste();
             if (SettingsOpen)
             {
                 if (_settingsController != null) _settingsController.Window.Activate();
@@ -214,6 +219,7 @@ namespace BestClip
 
         public void HideMain()
         {
+            CancelPendingPaste();
             if (_main != null) _main.Hide();
         }
 
@@ -235,12 +241,72 @@ namespace BestClip
         public void PasteItem(ClipItem item)
         {
             if (item == null) return;
-            if (!_clipboard.WriteToClipboard(item))
+            CancelPendingPaste();
+
+            // Keep our own write from being captured as a new clipboard item.
+            _clipboard.IgnoreChangesFor(TimeSpan.FromSeconds(2));
+
+            if (_clipboard.WriteToClipboard(item))
             {
-                _main.ShowToast("剪贴板正被其他程序占用，请重试");
+                CompletePaste(item);
                 return;
             }
 
+            // A busy clipboard can take a few seconds; cover the whole retry window.
+            _clipboard.IgnoreChangesFor(TimeSpan.FromSeconds(6));
+            _pendingPaste = item;
+            _pasteRetryCount = 0;
+            if (_main != null) _main.ShowToast("剪贴板暂时被其他程序占用，正在自动重试…");
+            _pasteRetryTimer = new DispatcherTimer();
+            _pasteRetryTimer.Interval = TimeSpan.FromMilliseconds(150);
+            _pasteRetryTimer.Tick += PasteRetryTimer_Tick;
+            _pasteRetryTimer.Start();
+        }
+
+        private void PasteRetryTimer_Tick(object sender, EventArgs e)
+        {
+            ClipItem item = _pendingPaste;
+            if (item == null)
+            {
+                CancelPendingPaste();
+                return;
+            }
+
+            _pasteRetryCount++;
+            if (_clipboard.WriteToClipboard(item))
+            {
+                CancelPendingPaste();
+                CompletePaste(item);
+                return;
+            }
+
+            if (_pasteRetryCount >= PasteRetryLimit)
+            {
+                Exception last = _clipboard.LastWriteError;
+                if (last != null)
+                {
+                    AppPaths.Log(new Exception(
+                        "Clipboard stayed busy after " + PasteRetryLimit + " retries: " + last.Message, last));
+                }
+                CancelPendingPaste();
+                if (_main != null) _main.ShowToast("剪贴板一直被占用，请关闭占用它的程序后重试");
+            }
+        }
+
+        private void CancelPendingPaste()
+        {
+            if (_pasteRetryTimer != null)
+            {
+                _pasteRetryTimer.Stop();
+                _pasteRetryTimer.Tick -= PasteRetryTimer_Tick;
+                _pasteRetryTimer = null;
+            }
+            _pendingPaste = null;
+            _pasteRetryCount = 0;
+        }
+
+        private void CompletePaste(ClipItem item)
+        {
             _store.MarkUsed(item);
             SaveSoon();
             HideMain();
@@ -404,6 +470,7 @@ namespace BestClip
             if (_exiting) return;
             _exiting = true;
             ShuttingDown = true;
+            CancelPendingPaste();
 
             try
             {

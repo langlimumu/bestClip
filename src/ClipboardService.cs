@@ -235,13 +235,23 @@ namespace BestClip
             }
         }
 
+        /// <summary>The last clipboard write failure, kept for diagnostics.</summary>
+        public Exception LastWriteError { get; private set; }
+
         /// <summary>Puts the item back on the clipboard. Returns false when the clipboard is locked.</summary>
         public bool WriteToClipboard(ClipItem item)
         {
-            if (item == null) return false;
+            return WriteToClipboard(item, 1);
+        }
 
-            IgnoreChangesFor(TimeSpan.FromSeconds(1.6));
-            for (int attempt = 0; attempt < 8; attempt++)
+        /// <summary>Puts the item back on the clipboard, retrying a bounded number of times.</summary>
+        public bool WriteToClipboard(ClipItem item, int attempts)
+        {
+            if (item == null) return false;
+            if (attempts < 1) attempts = 1;
+            LastWriteError = null;
+
+            for (int attempt = 0; attempt < attempts; attempt++)
             {
                 try
                 {
@@ -270,11 +280,13 @@ namespace BestClip
                         bmp.Freeze();
                         Clipboard.SetImage(bmp);
                     }
+                    LastWriteError = null;
                     return true;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    Thread.Sleep(45);
+                    LastWriteError = ex;
+                    if (attempt + 1 < attempts) Thread.Sleep(45);
                 }
             }
             return false;

@@ -69,10 +69,14 @@ images\         图片缓存
    shell:startup 目录，并在目标后加上 --autostart 参数。
 
 4. 双击后提示“对路径 %APPDATA%\BestClip 的访问被拒绝”？
-   1.1.1 已自动回退到程序目录下的 BestClip-data\，重新下载 1.1.1 即可。
+   1.1.1 起会自动回退到程序目录下的 BestClip-data\；1.1.2 起延长了剪贴板占用时的自动重试。
    也可以手动设置 BESTCLIP_DATA 环境变量指向一个可写目录。
 
 5. 如何卸载？
    退出 BestClip，删除程序目录和 %APPDATA%\BestClip 即可。
+
+6. 提示“剪贴板一直被其他程序占用”？
+   远程桌面、DLP/安全软件、输入法等会短暂锁住剪贴板。1.1.2 起会自动重试约 4.5 秒；
+   如果持续失败，请暂时关闭占用剪贴板的程序，或退出远程桌面后重试。
 
 项目主页：https://github.com/langlimumu/bestClip
