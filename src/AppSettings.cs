@@ -17,6 +17,7 @@ namespace BestClip
         [DataMember(Order = 4)] public int MaxItems { get; set; }
         [DataMember(Order = 5)] public bool FirstRunDone { get; set; }
         [DataMember(Order = 6)] public bool IgnorePasswordManagers { get; set; }
+        [DataMember(Order = 7)] public string Theme { get; set; }
 
         public AppSettings()
         {
@@ -25,6 +26,7 @@ namespace BestClip
             AutoPaste = true;
             MaxItems = 300;
             IgnorePasswordManagers = true;
+            Theme = "system";
         }
 
         public string HotkeyText
@@ -50,6 +52,7 @@ namespace BestClip
                                 s.HotkeyKey = Native.VK_V;
                             }
                             if (s.MaxItems < 20) s.MaxItems = 300;
+                            if (string.IsNullOrEmpty(s.Theme)) s.Theme = "system";
                             return s;
                         }
                     }

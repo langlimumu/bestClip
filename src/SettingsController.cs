@@ -24,17 +24,16 @@ namespace BestClip
         private readonly TextBlock _saveError;
         private readonly TextBlock _version;
         private readonly StackPanel _maxItemsPanel;
+        private readonly StackPanel _themePanel;
         private readonly Border _card;
 
         private uint _candidateModifiers;
         private uint _candidateKey;
         private int _maxItems;
         private bool _recording;
-
-        private static readonly Brush HotkeyNormalBorder = Freeze("#1FFFFFFF");
-        private static readonly Brush HotkeyActiveBorder = Freeze("#7C6CFF");
-        private static readonly Brush HotkeyNormalBackground = Freeze("#0FFFFFFF");
-        private static readonly Brush HotkeyActiveBackground = Freeze("#1F7C6CFF");
+        private bool _saved;
+        private string _selectedTheme;
+        private string _originalTheme;
 
         public bool ClearRequested { get; private set; }
 
@@ -54,7 +53,12 @@ namespace BestClip
             _saveError = (TextBlock)_window.FindName("SaveError");
             _version = (TextBlock)_window.FindName("VersionText");
             _maxItemsPanel = (StackPanel)_window.FindName("MaxItemsPanel");
+            _themePanel = (StackPanel)_window.FindName("ThemePanel");
             _card = (Border)_window.FindName("Card");
+
+            _originalTheme = app.Settings.Theme;
+            if (string.IsNullOrEmpty(_originalTheme)) _originalTheme = "system";
+            _selectedTheme = _originalTheme;
 
             _candidateModifiers = app.Settings.HotkeyModifiers;
             _candidateKey = app.Settings.HotkeyKey;
@@ -68,6 +72,7 @@ namespace BestClip
             Version version = Assembly.GetExecutingAssembly().GetName().Version;
             _version.Text = "BestClip " + version.Major + "." + version.Minor + "." + version.Build;
 
+            BuildThemes();
             BuildMaxItems();
             WireEvents();
 
@@ -93,6 +98,11 @@ namespace BestClip
             };
 
             ((Button)_window.FindName("CloseButton")).Click += delegate { _window.Close(); };
+            _window.Closing += delegate
+            {
+                if (!_saved && ThemeManager.SelectedId != _originalTheme)
+                    ThemeManager.Apply(_originalTheme);
+            };
             _hotkeyBox.MouseLeftButtonUp += delegate { BeginRecording(); };
             _window.PreviewKeyDown += Window_PreviewKeyDown;
             ((Button)_window.FindName("SaveButton")).Click += delegate { Save(); };
@@ -122,6 +132,33 @@ namespace BestClip
                 try { Process.Start("https://github.com/langlimumu/bestClip/releases/latest"); }
                 catch (Exception ex) { AppPaths.Log(ex); }
             };
+        }
+
+        private void BuildThemes()
+        {
+            Style segment = (Style)_window.FindResource("Segment");
+            foreach (ThemePalette theme in ThemeManager.Themes)
+            {
+                var radio = new RadioButton();
+                radio.Content = theme.DisplayName;
+                radio.Style = segment;
+                radio.GroupName = "Theme";
+                radio.Tag = theme.Id;
+                radio.Margin = new Thickness(0, 0, 7, 0);
+                radio.Checked += Theme_Checked;
+                if (theme.Id == _selectedTheme) radio.IsChecked = true;
+                _themePanel.Children.Add(radio);
+            }
+        }
+
+        private void Theme_Checked(object sender, RoutedEventArgs e)
+        {
+            var radio = sender as RadioButton;
+            if (radio == null) return;
+            string id = radio.Tag as string;
+            if (string.IsNullOrEmpty(id)) return;
+            _selectedTheme = id;
+            ThemeManager.Apply(id);
         }
 
         private void BuildMaxItems()
@@ -168,10 +205,10 @@ namespace BestClip
         private void BeginRecording()
         {
             _recording = true;
-            _hotkeyBox.BorderBrush = HotkeyActiveBorder;
-            _hotkeyBox.Background = HotkeyActiveBackground;
+            _hotkeyBox.SetResourceReference(Border.BorderBrushProperty, "HotkeyActiveBorderBrush");
+            _hotkeyBox.SetResourceReference(Border.BackgroundProperty, "HotkeyActiveBgBrush");
             _hotkeyText.Text = "请按下快捷键…";
-            _hotkeyText.Foreground = new SolidColorBrush(Color.FromRgb(0xE6, 0xE1, 0xFF));
+            _hotkeyText.SetResourceReference(TextBlock.ForegroundProperty, "SegmentCheckedTextBrush");
             _hotkeyHint.Text = "按 Esc 取消录制；至少需要 Ctrl、Alt 或 Shift 中的一个";
             _hotkeyError.Visibility = Visibility.Collapsed;
             _window.Activate();
@@ -188,9 +225,9 @@ namespace BestClip
 
         private void ResetHotkeyVisual()
         {
-            _hotkeyBox.BorderBrush = HotkeyNormalBorder;
-            _hotkeyBox.Background = HotkeyNormalBackground;
-            _hotkeyText.Foreground = new SolidColorBrush(Color.FromRgb(0xDD, 0xE3, 0xEE));
+            _hotkeyBox.SetResourceReference(Border.BorderBrushProperty, "HotkeyNormalBorderBrush");
+            _hotkeyBox.SetResourceReference(Border.BackgroundProperty, "HotkeyNormalBgBrush");
+            _hotkeyText.SetResourceReference(TextBlock.ForegroundProperty, "TextBodyBrush");
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -293,6 +330,8 @@ namespace BestClip
             _app.Settings.AutoPaste = _autoPaste.IsChecked == true;
             _app.Settings.IgnorePasswordManagers = _ignorePassword.IsChecked == true;
             _app.Settings.MaxItems = _maxItems;
+            _app.Settings.Theme = _selectedTheme;
+            _saved = true;
             _app.Settings.Save();
             _app.Store.SetMaxItems(_maxItems);
             _app.SaveSoon();

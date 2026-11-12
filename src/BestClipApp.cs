@@ -52,6 +52,7 @@ namespace BestClip
             {
                 AppPaths.EnsureCreated();
                 _settings = AppSettings.Load();
+                ThemeManager.Apply(_settings.Theme);
                 AutoStart.RefreshIfEnabled();
                 _store = new HistoryStore(_settings.MaxItems);
                 _store.Load();
@@ -76,6 +77,12 @@ namespace BestClip
 
                 _main = new MainWindowController(this);
                 _tray = new TrayIcon(this);
+                _tray.ApplyTheme(ThemeManager.Current.IsLight);
+                ThemeManager.Changed += delegate
+                {
+                    if (_tray != null) _tray.ApplyTheme(ThemeManager.Current.IsLight);
+                    if (_main != null) _main.Refresh();
+                };
                 _main.Refresh();
 
                 if (!string.IsNullOrEmpty(_hotkeyError))
@@ -86,6 +93,7 @@ namespace BestClip
 
                 StartShowListener();
 
+                if (HasArg("--keep-open")) SuppressHide = true;
                 bool demo = HasArg("--demo");
                 if (demo)
                 {
@@ -99,6 +107,20 @@ namespace BestClip
                     _settings.Save();
                     _clipboard.CaptureCurrentClipboard();
                     _main.Refresh();
+                }
+
+                if (HasArg("--hover-preview"))
+                {
+                    _main.ShowForCapture();
+                    var previewTimer = new DispatcherTimer();
+                    previewTimer.Interval = TimeSpan.FromMilliseconds(700);
+                    previewTimer.Tick += delegate
+                    {
+                        previewTimer.Stop();
+                        _main.ShowPreviewForTest();
+                    };
+                    previewTimer.Start();
+                    return;
                 }
 
                 if (HasArg("--screenshot"))

@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using WinForms = System.Windows.Forms;
 
@@ -39,10 +40,24 @@ namespace BestClip
         private readonly Border _chipImage;
         private readonly Border _chipFiles;
         private readonly Border _chipPinned;
+        private readonly Popup _previewPopup;
+        private readonly Border _previewCard;
+        private readonly TextBlock _previewKind;
+        private readonly TextBlock _previewMeta;
+        private readonly TextBlock _previewText;
+        private readonly ScrollViewer _previewScroll;
+        private readonly Image _previewImage;
+        private readonly ScrollViewer _previewFilesScroll;
+        private readonly StackPanel _previewFiles;
+        private readonly DispatcherTimer _previewTimer;
+        private ClipItem _previewItem;
+        private ListBoxItem _previewContainer;
         private readonly DispatcherTimer _toastTimer;
         private readonly DispatcherTimer _clearTimer;
         private readonly ContextMenu _itemMenu;
         private readonly Style _menuItemStyle;
+        private MenuItem _menuOpenLink;
+        private MenuItem _menuSaveImage;
 
         private List<ClipItem> _visibleItems = new List<ClipItem>();
         private string _filter = "all";
@@ -75,6 +90,19 @@ namespace BestClip
             _chipImage = (Border)_window.FindName("ChipImage");
             _chipFiles = (Border)_window.FindName("ChipFiles");
             _chipPinned = (Border)_window.FindName("ChipPinned");
+            _previewPopup = (Popup)_window.FindName("PreviewPopup");
+            _previewCard = (Border)_window.FindName("PreviewCard");
+            _previewKind = (TextBlock)_window.FindName("PreviewKind");
+            _previewMeta = (TextBlock)_window.FindName("PreviewMeta");
+            _previewText = (TextBlock)_window.FindName("PreviewText");
+            _previewScroll = (ScrollViewer)_window.FindName("PreviewScroll");
+            _previewImage = (Image)_window.FindName("PreviewImage");
+            _previewFilesScroll = (ScrollViewer)_window.FindName("PreviewFilesScroll");
+            _previewFiles = (StackPanel)_window.FindName("PreviewFiles");
+
+            _previewTimer = new DispatcherTimer();
+            _previewTimer.Interval = TimeSpan.FromMilliseconds(450);
+            _previewTimer.Tick += PreviewTimer_Tick;
 
             _toastTimer = new DispatcherTimer();
             _toastTimer.Interval = TimeSpan.FromMilliseconds(1700);
@@ -119,6 +147,10 @@ namespace BestClip
 
             _list.MouseLeftButtonUp += List_MouseLeftButtonUp;
             _list.MouseRightButtonUp += List_MouseRightButtonUp;
+            _list.PreviewMouseMove += List_MouseMove;
+            _list.MouseLeave += List_MouseLeave;
+            _list.SelectionChanged += delegate { HidePreview(); };
+            _list.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler(List_ScrollChanged));
             _window.PreviewKeyDown += Window_PreviewKeyDown;
             _window.Deactivated += Window_Deactivated;
             _window.Closing += Window_Closing;
@@ -190,7 +222,7 @@ namespace BestClip
             {
                 _clearPending = true;
                 _clearHistory.Content = "确认清空？";
-                _clearHistory.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x6B, 0x81));
+                _clearHistory.Foreground = ResourceBrush("DangerTextBrush", Color.FromRgb(0xFF, 0x6B, 0x81));
                 _clearTimer.Start();
                 ShowToast("再次点击“确认清空？”即可删除全部记录");
                 return;
@@ -212,7 +244,7 @@ namespace BestClip
             }
             _clearPending = true;
             _clearHistory.Content = "确认清空？";
-            _clearHistory.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x6B, 0x81));
+            _clearHistory.Foreground = ResourceBrush("DangerTextBrush", Color.FromRgb(0xFF, 0x6B, 0x81));
             _clearTimer.Start();
             ShowToast("再次点击“确认清空？”即可删除全部记录");
         }
@@ -241,6 +273,205 @@ namespace BestClip
             PasteSelected();
         }
 
+        private static void Diag(string message)
+        {
+            try { System.IO.File.AppendAllText(AppPaths.LogFile, DateTime.Now.ToString("HH:mm:ss.fff") + " " + message + "\r\n"); } catch { }
+        }
+
+        /// <summary>Test hook: open the preview for the first visible item.</summary>
+        public void ShowPreviewForTest()
+        {
+            if (_visibleItems.Count == 0) return;
+            _window.UpdateLayout();
+            ClipItem item = _visibleItems[0];
+            var container = _list.ItemContainerGenerator.ContainerFromItem(item) as ListBoxItem;
+            if (container == null)
+            {
+                _list.ScrollIntoView(item);
+                _list.UpdateLayout();
+                container = _list.ItemContainerGenerator.ContainerFromItem(item) as ListBoxItem;
+            }
+            if (container == null) return;
+            _previewContainer = container;
+            _previewItem = item;
+            ShowPreview(item);
+        }
+
+        private void List_MouseMove(object sender, MouseEventArgs e)
+        {
+            var container = _list.ContainerFromElement(e.OriginalSource as DependencyObject) as ListBoxItem;
+            Diag("move container=" + (container == null ? "null" : "item"));
+            if (container == null || container.DataContext == null)
+            {
+                _previewTimer.Stop();
+                _previewItem = null;
+                _previewContainer = null;
+                HidePreview();
+                return;
+            }
+            if (container == _previewContainer) return;
+
+            HidePreview();
+            _previewContainer = container;
+            _previewItem = container.DataContext as ClipItem;
+            _previewTimer.Stop();
+            _previewTimer.Start();
+        }
+
+        private void List_MouseLeave(object sender, MouseEventArgs e)
+        {
+            _previewTimer.Stop();
+            _previewItem = null;
+            _previewContainer = null;
+            HidePreview();
+        }
+
+        private void List_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            HidePreview();
+        }
+
+        private void PreviewTimer_Tick(object sender, EventArgs e)
+        {
+            _previewTimer.Stop();
+            Diag("tick item=" + (_previewItem == null ? "null" : "set"));
+            if (!_window.IsVisible || _previewItem == null || _previewContainer == null) return;
+            ShowPreview(_previewItem);
+        }
+
+        private void ShowPreview(ClipItem item)
+        {
+            Diag("show " + item.Kind);
+            _previewKind.Text = item.KindLabel + "预览";
+            _previewMeta.Text = item.MetaText + " · " + item.SourceLabel;
+            _previewText.Text = "";
+            _previewImage.Source = null;
+            _previewFiles.Children.Clear();
+            _previewScroll.Visibility = Visibility.Collapsed;
+            _previewImage.Visibility = Visibility.Collapsed;
+            _previewFilesScroll.Visibility = Visibility.Collapsed;
+
+            if (item.Kind == ClipKind.Image)
+            {
+                try
+                {
+                    string path = AppPaths.ImagePath(item.ImageFile);
+                    if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+                    {
+                        _previewText.Text = "图片文件已被清理。";
+                        _previewScroll.Visibility = Visibility.Visible;
+                    }
+                    else
+                    {
+                        var bmp = new BitmapImage();
+                        bmp.BeginInit();
+                        bmp.CacheOption = BitmapCacheOption.OnLoad;
+                        bmp.DecodePixelWidth = 1000;
+                        bmp.UriSource = new Uri(path, UriKind.Absolute);
+                        bmp.EndInit();
+                        bmp.Freeze();
+                        _previewImage.Source = bmp;
+                        _previewImage.Visibility = Visibility.Visible;
+                    }
+                }
+                catch
+                {
+                    _previewText.Text = "无法读取图片预览。";
+                    _previewScroll.Visibility = Visibility.Visible;
+                }
+            }
+            else if (item.Kind == ClipKind.Files && item.Files != null && item.Files.Length > 0)
+            {
+                Brush textBrush = ResourceBrush("TextBodyBrush", Color.FromRgb(0xED, 0xF1, 0xF7));
+                int shown = 0;
+                foreach (string file in item.Files)
+                {
+                    if (shown >= 30) break;
+                    var line = new TextBlock();
+                    line.Text = "•  " + file;
+                    line.FontSize = 11.5;
+                    line.TextWrapping = TextWrapping.Wrap;
+                    line.Margin = new Thickness(0, 0, 0, 5);
+                    line.Foreground = textBrush;
+                    line.ToolTip = file;
+                    _previewFiles.Children.Add(line);
+                    shown++;
+                }
+                if (item.Files.Length > shown)
+                {
+                    var more = new TextBlock();
+                    more.Text = "等 " + item.Files.Length + " 个文件";
+                    more.FontSize = 11;
+                    more.Margin = new Thickness(0, 3, 0, 0);
+                    more.Foreground = ResourceBrush("TextMutedBrush", Color.FromRgb(0x7D, 0x87, 0x9C));
+                    _previewFiles.Children.Add(more);
+                }
+                _previewFilesScroll.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                string text = item.Text ?? "";
+                bool truncated = text.Length > 20000;
+                if (truncated) text = text.Substring(0, 20000) + "\n\n…（预览已截断）";
+                _previewText.Text = string.IsNullOrEmpty(text) ? "(空文本)" : text;
+                _previewScroll.Visibility = Visibility.Visible;
+            }
+
+            PositionPreview();
+            _previewPopup.IsOpen = true;
+        }
+
+        private void PositionPreview()
+        {
+            try
+            {
+                Point item = _previewContainer.TranslatePoint(new Point(0, 0), _window);
+                double scale = 1.0;
+                PresentationSource source = PresentationSource.FromVisual(_window);
+                if (source != null && source.CompositionTarget != null)
+                    scale = source.CompositionTarget.TransformToDevice.M11;
+                if (scale <= 0) scale = 1.0;
+
+                const double popWidth = 520;
+                const double popHeight = 440;
+                double x = _window.ActualWidth + 10;
+                double y = item.Y - 26;
+
+                Point windowScreen = _window.PointToScreen(new Point(0, 0));
+                IntPtr handle = new WindowInteropHelper(_window).Handle;
+                System.Drawing.Rectangle area = WinForms.Screen.FromHandle(handle).WorkingArea;
+
+                double windowRight = windowScreen.X + (_window.ActualWidth * scale);
+                bool fitsRight = windowRight + ((popWidth + 12) * scale) <= area.Right;
+                if (!fitsRight)
+                {
+                    bool fitsLeft = (windowScreen.X - ((popWidth + 12) * scale)) >= area.Left + (8 * scale);
+                    x = fitsLeft ? -popWidth - 12 : 8;
+                }
+                if (y + popHeight > _window.ActualHeight) y = _window.ActualHeight - popHeight - 8;
+                if (y < 8) y = 8;
+
+                _previewPopup.PlacementTarget = _window;
+                _previewPopup.Placement = PlacementMode.Relative;
+                _previewPopup.HorizontalOffset = x;
+                _previewPopup.VerticalOffset = y;
+            }
+            catch
+            {
+                _previewPopup.PlacementTarget = _previewContainer;
+                _previewPopup.Placement = PlacementMode.Right;
+                _previewPopup.HorizontalOffset = 10;
+                _previewPopup.VerticalOffset = -26;
+            }
+        }
+
+        private void HidePreview()
+        {
+            _previewPopup.IsOpen = false;
+            _previewImage.Source = null;
+            _previewFiles.Children.Clear();
+        }
+
         private void List_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
             var container = _list.ContainerFromElement(e.OriginalSource as DependencyObject) as ListBoxItem;
@@ -248,10 +479,69 @@ namespace BestClip
             var item = container.DataContext as ClipItem;
             if (item == null) return;
             _list.SelectedItem = item;
+            _menuOpenLink.Visibility = IsUrl(item.Text) ? Visibility.Visible : Visibility.Collapsed;
+            _menuSaveImage.Visibility = item.Kind == ClipKind.Image ? Visibility.Visible : Visibility.Collapsed;
             _itemMenu.PlacementTarget = _list;
             _itemMenu.Placement = PlacementMode.MousePoint;
             _itemMenu.IsOpen = true;
             e.Handled = true;
+        }
+
+        private static bool IsUrl(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return false;
+            string value = text.Trim();
+            if (value.Length > 2048 || value.IndexOfAny(new[] { ' ', '\r', '\n' }) >= 0) return false;
+            Uri uri;
+            return (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                    || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                   && Uri.TryCreate(value, UriKind.Absolute, out uri);
+        }
+
+        private void OpenLinkSelected()
+        {
+            var item = _list.SelectedItem as ClipItem;
+            if (item == null || !IsUrl(item.Text)) return;
+            try
+            {
+                string url = item.Text.Trim();
+                HidePreview();
+                _app.HideMain();
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                AppPaths.Log(ex);
+                ShowToast("无法打开链接");
+            }
+        }
+
+        private void SaveImageSelected()
+        {
+            var item = _list.SelectedItem as ClipItem;
+            if (item == null || item.Kind != ClipKind.Image || string.IsNullOrEmpty(item.ImageFile)) return;
+            string source = AppPaths.ImagePath(item.ImageFile);
+            if (!System.IO.File.Exists(source))
+            {
+                ShowToast("图片文件已被清理");
+                return;
+            }
+            var dialog = new Microsoft.Win32.SaveFileDialog();
+            dialog.Title = "保存图片";
+            dialog.Filter = "PNG 图片 (*.png)|*.png";
+            dialog.FileName = "BestClip-" + item.CreatedUtc.ToLocalTime().ToString("yyyyMMdd-HHmmss") + ".png";
+            bool? result = dialog.ShowDialog(_window);
+            if (result != true) return;
+            try
+            {
+                System.IO.File.Copy(source, dialog.FileName, true);
+                ShowToast("图片已保存");
+            }
+            catch (Exception ex)
+            {
+                AppPaths.Log(ex);
+                ShowToast("保存图片失败");
+            }
         }
 
         private ContextMenu BuildItemMenu()
@@ -262,6 +552,14 @@ namespace BestClip
             var paste = new MenuItem { Header = "粘贴", InputGestureText = "Enter", Style = _menuItemStyle };
             paste.Click += delegate { PasteSelected(); };
             menu.Items.Add(paste);
+
+            _menuOpenLink = new MenuItem { Header = "在浏览器中打开", Style = _menuItemStyle, Visibility = Visibility.Collapsed };
+            _menuOpenLink.Click += delegate { OpenLinkSelected(); };
+            menu.Items.Add(_menuOpenLink);
+
+            _menuSaveImage = new MenuItem { Header = "图片另存为…", Style = _menuItemStyle, Visibility = Visibility.Collapsed };
+            _menuSaveImage.Click += delegate { SaveImageSelected(); };
+            menu.Items.Add(_menuSaveImage);
 
             var pin = new MenuItem { Header = "固定 / 取消固定", InputGestureText = "Ctrl+P", Style = _menuItemStyle };
             pin.Click += delegate { TogglePinSelected(); };
@@ -323,6 +621,16 @@ namespace BestClip
             else if (e.Key == Key.PageDown)
             {
                 MoveSelection(5);
+                e.Handled = true;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key >= Key.D1 && e.Key <= Key.D9)
+            {
+                int index = (int)e.Key - (int)Key.D1;
+                if (index >= 0 && index < _visibleItems.Count)
+                {
+                    _list.SelectedIndex = index;
+                    PasteSelected();
+                }
                 e.Handled = true;
             }
             else if (e.Key == Key.Enter)
@@ -430,6 +738,8 @@ namespace BestClip
 
             ClipItem selected = _list.SelectedItem as ClipItem;
             _visibleItems = source.ToList();
+            for (int i = 0; i < _visibleItems.Count; i++)
+                _visibleItems[i].Index = i < 9 ? i + 1 : 0;
 
             _list.ItemsSource = null;
             _list.ItemsSource = _visibleItems;
@@ -475,25 +785,26 @@ namespace BestClip
 
         private static void StyleChip(Border chip, bool selected)
         {
-            if (selected)
-            {
-                chip.Background = new SolidColorBrush(Color.FromArgb(0x22, 0x7C, 0x6C, 0xFF));
-                chip.BorderBrush = new SolidColorBrush(Color.FromArgb(0x55, 0x7C, 0x6C, 0xFF));
-            }
-            else
-            {
-                chip.Background = Brushes.Transparent;
-                chip.BorderBrush = Brushes.Transparent;
-            }
+            Brush selectedBg = ResourceBrush("SegmentCheckedBgBrush", Color.FromArgb(0x22, 0x7C, 0x6C, 0xFF));
+            Brush selectedBorder = ResourceBrush("SegmentCheckedBorderBrush", Color.FromArgb(0x55, 0x7C, 0x6C, 0xFF));
+            Brush selectedText = ResourceBrush("SegmentCheckedTextBrush", Color.FromRgb(0xD6, 0xD0, 0xFF));
+            Brush normalText = ResourceBrush("ChipTextBrush", Color.FromRgb(0x81, 0x8C, 0xA1));
+
+            chip.Background = selected ? selectedBg : Brushes.Transparent;
+            chip.BorderBrush = selected ? selectedBorder : Brushes.Transparent;
 
             foreach (TextBlock tb in FindVisualChildren<TextBlock>(chip))
             {
                 string family = tb.FontFamily == null ? "" : tb.FontFamily.Source;
                 if (family.IndexOf("Segoe Fluent", StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                tb.Foreground = selected
-                    ? new SolidColorBrush(Color.FromRgb(0xD6, 0xD0, 0xFF))
-                    : new SolidColorBrush(Color.FromRgb(0x81, 0x8C, 0xA1));
+                tb.Foreground = selected ? selectedText : normalText;
             }
+        }
+
+        private static Brush ResourceBrush(string key, Color fallback)
+        {
+            Brush brush = Application.Current == null ? null : Application.Current.TryFindResource(key) as Brush;
+            return brush ?? new SolidColorBrush(fallback);
         }
 
         private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T : DependencyObject
@@ -556,6 +867,10 @@ namespace BestClip
 
         public void Hide()
         {
+            _previewTimer.Stop();
+            _previewItem = null;
+            _previewContainer = null;
+            HidePreview();
             _toast.Visibility = Visibility.Collapsed;
             _toast.BeginAnimation(UIElement.OpacityProperty, null);
             _toast.Opacity = 0;

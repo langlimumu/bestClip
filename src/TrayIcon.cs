@@ -29,10 +29,8 @@ namespace BestClip
 
             _menu = new ContextMenuStrip();
             _menu.ShowImageMargin = false;
-            _menu.BackColor = Color.FromArgb(23, 26, 35);
-            _menu.ForeColor = Color.FromArgb(230, 234, 242);
             _menu.Font = new Font("Microsoft YaHei UI", 9f);
-            _menu.Renderer = new ToolStripProfessionalRenderer(new DarkColorTable());
+            ApplyTheme(false);
             _menu.Padding = new Padding(4);
 
             var open = CreateItem("打开 BestClip", "");
@@ -79,10 +77,29 @@ namespace BestClip
         private ToolStripMenuItem CreateItem(string text, string shortcut)
         {
             var item = new ToolStripMenuItem(text);
-            item.ForeColor = Color.FromArgb(230, 234, 242);
+            item.ForeColor = _menu.ForeColor;
             item.Padding = new Padding(7, 5, 7, 5);
             item.ShortcutKeyDisplayString = shortcut;
             return item;
+        }
+
+        public void ApplyTheme(bool light)
+        {
+            try
+            {
+                Color back = light ? Color.White : Color.FromArgb(23, 26, 35);
+                Color fore = light ? Color.FromArgb(34, 43, 61) : Color.FromArgb(230, 234, 242);
+                _menu.BackColor = back;
+                _menu.ForeColor = fore;
+                _menu.Renderer = light ? new ToolStripProfessionalRenderer() : new ToolStripProfessionalRenderer(new DarkColorTable());
+                foreach (ToolStripItem item in _menu.Items)
+                {
+                    if (item is ToolStripMenuItem) item.ForeColor = fore;
+                }
+            }
+            catch
+            {
+            }
         }
 
         private void Menu_Opening(object sender, System.ComponentModel.CancelEventArgs e)

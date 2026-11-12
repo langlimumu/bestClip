@@ -203,6 +203,13 @@ namespace BestClip
             }
         }
 
+        /// <summary>1-9 quick-paste position in the current visible list; 0 when not shown.</summary>
+        public int Index { get; set; }
+
+        public bool HasIndex { get { return Index > 0; } }
+
+        public string IndexLabel { get { return Index > 0 ? Index.ToString() : ""; } }
+
         public bool IsImage { get { return Kind == ClipKind.Image; } }
 
         public void LoadThumbnail()

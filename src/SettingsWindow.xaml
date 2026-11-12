@@ -1,7 +1,7 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="BestClip 设置"
-        Width="560" Height="700"
+        Width="560" Height="820"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" Topmost="True" ResizeMode="NoResize"
         WindowStartupLocation="Manual"
@@ -15,16 +15,11 @@
             <GradientStop Color="#4DA3FF" Offset="1"/>
         </LinearGradientBrush>
 
-        <LinearGradientBrush x:Key="CardBackground" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#101219" Offset="0"/>
-            <GradientStop Color="#0C0E14" Offset="1"/>
-        </LinearGradientBrush>
-
         <Style x:Key="IconButton" TargetType="Button">
             <Setter Property="Width" Value="32"/>
             <Setter Property="Height" Value="32"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#98A2B5"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="Template">
@@ -35,11 +30,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF"/>
-                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextOnAccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#22FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlPressedBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -48,8 +43,8 @@
         </Style>
 
         <Style x:Key="Panel" TargetType="Border">
-            <Setter Property="Background" Value="#08FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#12FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource PanelBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="14"/>
             <Setter Property="Padding" Value="16,12"/>
@@ -58,18 +53,18 @@
         <Style x:Key="SectionTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="10.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#6F7A8E"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="Margin" Value="3,0,0,9"/>
         </Style>
 
         <Style x:Key="RowTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="12.5"/>
-            <Setter Property="Foreground" Value="#E9EDF4"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBodyBrush}"/>
         </Style>
 
         <Style x:Key="RowHint" TargetType="TextBlock">
             <Setter Property="FontSize" Value="10.5"/>
-            <Setter Property="Foreground" Value="#6B7588"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="Margin" Value="0,3,0,0"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
@@ -81,14 +76,14 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
                         <Grid Width="42" Height="23" Background="Transparent">
-                            <Border x:Name="Track" CornerRadius="11.5" Background="#24FFFFFF"/>
-                            <Ellipse x:Name="Knob" Width="17" Height="17" Fill="#A9B2C2"
+                            <Border x:Name="Track" CornerRadius="11.5" Background="{DynamicResource SwitchTrackOffBrush}"/>
+                            <Ellipse x:Name="Knob" Width="17" Height="17" Fill="{DynamicResource SwitchKnobOffBrush}"
                                      HorizontalAlignment="Left" Margin="3,0,0,0"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Track" Property="Background" Value="#7C6CFF"/>
-                                <Setter TargetName="Knob" Property="Fill" Value="#FFFFFF"/>
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource TextOnAccentBrush}"/>
                                 <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right"/>
                                 <Setter TargetName="Knob" Property="Margin" Value="0,0,3,0"/>
                             </Trigger>
@@ -99,7 +94,7 @@
         </Style>
 
         <Style x:Key="Segment" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="#818CA1"/>
+            <Setter Property="Foreground" Value="{DynamicResource ChipTextBrush}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="Margin" Value="0,0,6,0"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -108,17 +103,17 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
                         <Border x:Name="Bd" CornerRadius="7" Padding="11,5"
-                                Background="#0AFFFFFF" BorderThickness="1" BorderBrush="#14FFFFFF">
+                                Background="{DynamicResource SegmentBgBrush}" BorderThickness="1" BorderBrush="{DynamicResource SegmentBorderBrush}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#0FFFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlBgBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#227C6CFF"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#557C6CFF"/>
-                                <Setter Property="Foreground" Value="#D6D0FF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SegmentCheckedBgBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource SegmentCheckedBorderBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource SegmentCheckedTextBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -127,7 +122,7 @@
         </Style>
 
         <Style x:Key="PrimaryButton" TargetType="Button">
-            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentBrush}"/>
             <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -153,20 +148,20 @@
         </Style>
 
         <Style x:Key="DangerButton" TargetType="Button">
-            <Setter Property="Foreground" Value="#FF8093"/>
+            <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}"/>
             <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" CornerRadius="8" Background="#14FF6B81" BorderBrush="#40FF6B81"
+                        <Border x:Name="Bd" CornerRadius="8" Background="{DynamicResource DangerBgBrush}" BorderBrush="{DynamicResource DangerBorderBrush}"
                                 BorderThickness="1" Padding="13,6">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#26FF6B81"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource DangerHoverBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -189,7 +184,7 @@
                                     <Thumb>
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
-                                                <Border Background="#2EFFFFFF" CornerRadius="3" Margin="1,3"/>
+                                                <Border Background="{DynamicResource ScrollThumbBrush}" CornerRadius="3" Margin="1,3"/>
                                             </ControlTemplate>
                                         </Thumb.Template>
                                     </Thumb>
@@ -207,10 +202,10 @@
 
     <Grid x:Name="RootGrid">
         <Border x:Name="Card" Margin="16" CornerRadius="18"
-                Background="{StaticResource CardBackground}"
-                BorderBrush="#1FFFFFFF" BorderThickness="1">
+                Background="{DynamicResource CardBackgroundBrush}"
+                BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1">
             <Border.Effect>
-                <DropShadowEffect BlurRadius="38" ShadowDepth="9" Opacity="0.55" Color="#000000"/>
+                <DropShadowEffect BlurRadius="38" ShadowDepth="9" Opacity="{DynamicResource ShadowOpacity}" Color="{DynamicResource ShadowColor}"/>
             </Border.Effect>
 
             <Grid>
@@ -222,8 +217,8 @@
 
                 <Grid Grid.Row="0" Margin="24,0,16,0" x:Name="HeaderArea" Background="Transparent">
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="设置" FontSize="17" FontWeight="SemiBold" Foreground="#F7F9FC"/>
-                        <TextBlock Text="让 BestClip 更符合你的习惯" FontSize="10.5" Foreground="#6D7789" Margin="0,3,0,0"/>
+                        <TextBlock Text="设置" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="让 BestClip 更符合你的习惯" FontSize="10.5" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0"/>
                     </StackPanel>
                     <Button x:Name="CloseButton" HorizontalAlignment="Right" VerticalAlignment="Center"
                             Style="{StaticResource IconButton}" ToolTip="关闭" AutomationProperties.Name="关闭设置">
@@ -247,17 +242,26 @@
                                         <TextBlock Text="在任意应用中唤出历史面板" Style="{StaticResource RowHint}"/>
                                     </StackPanel>
                                     <Border x:Name="HotkeyBox" Grid.Column="1" Width="172" Height="38"
-                                            Background="#0FFFFFFF" BorderBrush="#1FFFFFFF" BorderThickness="1"
+                                            Background="{DynamicResource ControlBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1"
                                             CornerRadius="9" VerticalAlignment="Center" Margin="0,0,0,2"
                                             AutomationProperties.Name="全局快捷键，点击重新录制">
                                         <TextBlock x:Name="HotkeyText" Text="Ctrl + Shift + V" FontSize="12"
-                                                   Foreground="#DDE3EE" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                   Foreground="{DynamicResource TextBodyBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                 </Grid>
                                 <TextBlock x:Name="HotkeyHint" Text="点击右侧快捷键可重新录制，按 Esc 取消"
-                                           FontSize="10" Foreground="#5E6879" Margin="0,10,0,0"/>
-                                <TextBlock x:Name="HotkeyError" FontSize="10.5" Foreground="#FF8093"
+                                           FontSize="10" Foreground="{DynamicResource TextMutedBrush}" Margin="0,10,0,0"/>
+                                <TextBlock x:Name="HotkeyError" FontSize="10.5" Foreground="{DynamicResource DangerTextBrush}"
                                            Margin="0,6,0,0" Visibility="Collapsed" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="外观" Style="{StaticResource SectionTitle}" Margin="3,16,0,9"/>
+                        <Border Style="{StaticResource Panel}">
+                            <StackPanel>
+                                <TextBlock Text="主题" Style="{StaticResource RowTitle}"/>
+                                <TextBlock Text="选择界面配色；浅色和护眼模式更适合白天使用" Style="{StaticResource RowHint}"/>
+                                <StackPanel x:Name="ThemePanel" Orientation="Horizontal" Margin="0,11,0,0"/>
                             </StackPanel>
                         </Border>
 
@@ -277,7 +281,7 @@
                                               VerticalAlignment="Center"/>
                                 </Grid>
 
-                                <Border Height="1" Background="#0EFFFFFF" Margin="0,13"/>
+                                <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,13"/>
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -292,7 +296,7 @@
                                               VerticalAlignment="Center"/>
                                 </Grid>
 
-                                <Border Height="1" Background="#0EFFFFFF" Margin="0,13"/>
+                                <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,13"/>
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -325,7 +329,7 @@
                                                 VerticalAlignment="Center"/>
                                 </Grid>
 
-                                <Border Height="1" Background="#0EFFFFFF" Margin="0,13"/>
+                                <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,13"/>
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -346,26 +350,26 @@
 
                 <Grid Grid.Row="2" Margin="24,0,20,0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="VersionText" Text="BestClip 1.1.3" FontSize="10" Foreground="#5F697B"/>
-                        <TextBlock Text="  ·  " FontSize="10" Foreground="#3E4758"/>
+                        <TextBlock x:Name="VersionText" Text="BestClip 1.2.0" FontSize="10" Foreground="{DynamicResource VersionTextBrush}"/>
+                        <TextBlock Text="  ·  " FontSize="10" Foreground="{DynamicResource FooterSeparatorBrush}"/>
                         <TextBlock FontSize="10">
                             <Hyperlink x:Name="GitHubLink" NavigateUri="https://github.com/langlimumu/bestClip"
-                                       Foreground="#8B7CFF" TextDecorations="None">GitHub</Hyperlink>
+                                       Foreground="{DynamicResource AccentBrush}" TextDecorations="None">GitHub</Hyperlink>
                         </TextBlock>
-                        <TextBlock Text="  ·  " FontSize="10" Foreground="#3E4758"/>
+                        <TextBlock Text="  ·  " FontSize="10" Foreground="{DynamicResource FooterSeparatorBrush}"/>
                         <TextBlock FontSize="10">
                             <Hyperlink x:Name="DataLink" NavigateUri="file:///"
-                                       Foreground="#8B7CFF" TextDecorations="None">数据目录</Hyperlink>
+                                       Foreground="{DynamicResource AccentBrush}" TextDecorations="None">数据目录</Hyperlink>
                         </TextBlock>
-                        <TextBlock Text="  ·  " FontSize="10" Foreground="#3E4758"/>
+                        <TextBlock Text="  ·  " FontSize="10" Foreground="{DynamicResource FooterSeparatorBrush}"/>
                         <TextBlock FontSize="10">
                             <Hyperlink x:Name="UpdateLink" NavigateUri="https://github.com/langlimumu/bestClip/releases/latest"
-                                       Foreground="#8B7CFF" TextDecorations="None">检查更新</Hyperlink>
+                                       Foreground="{DynamicResource AccentBrush}" TextDecorations="None">检查更新</Hyperlink>
                         </TextBlock>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <TextBlock x:Name="SaveError" FontSize="10.5" Foreground="#FF8093"
+                        <TextBlock x:Name="SaveError" FontSize="10.5" Foreground="{DynamicResource DangerTextBrush}"
                                    VerticalAlignment="Center" Margin="0,0,12,0" Visibility="Collapsed"/>
                         <Button x:Name="SaveButton" Content="保存" Style="{StaticResource PrimaryButton}"
                                 AutomationProperties.Name="保存设置" Width="92" Height="38"/>
